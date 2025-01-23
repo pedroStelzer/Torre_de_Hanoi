@@ -196,47 +196,46 @@ mensagem_final:
 ; A funcao recursiva hanoi passa 4 argumentos: numero de discos, origem, auxiliar e destino
 hanoi:
 
-    push ebp            ; Empurra EBP para o topo da pilha
-    mov ebp, esp        ; Copia o valor de ESP para EBP e configura o novo quadro de pilha
+    push ebp                            ; Empurra EBP para o topo da pilha
+    mov ebp, esp                        ; Copia o valor de ESP para EBP e configura o novo quadro de pilha
 
-    mov ecx, [ebp+20]   ; Atualiza o valor do contador ECX a partir do valor salvo na pilha
-    cmp ecx, 1          ; Verifica se o contador tem o valor 1 (1 disco apenas)
-    je um_disco         ; Se a verificacao anterior for verdade pula para um_disco
+    mov ecx, [ebp+20]                   ; Atualiza o valor do contador ECX a partir do valor salvo na pilha
+    cmp ecx, 1                          ; Verifica se o contador tem o valor 1 (1 disco apenas)
+    je um_disco                         ; Se a verificacao anterior for verdade pula para um_disco
 
-    sub ecx, 1          ; Decrementa o contador em 1
+    sub ecx, 1                          ; Decrementa o contador em 1
     push ecx            
-    mov eax, [ebp+16]   ; Insere o novo valor para origem (origem)
+    mov eax, [ebp+16]                   ; Insere o novo valor para origem (origem)
     push eax
-    mov eax, [ebp+8]    ; Insere o novo valor para auxiliar (destino)
+    mov eax, [ebp+8]                    ; Insere o novo valor para auxiliar (destino)
     push eax
-    mov eax, [ebp+12]   ; Insere o novo valor para destino (auxiliar)
+    mov eax, [ebp+12]                   ; Insere o novo valor para destino (auxiliar)
     push eax
-    call hanoi          ; Chama a funcao novamente com os novos valores de origem, auxiliar e destino
-    add esp, 16         ; Limpa a pilha apos chamada
+    call hanoi                          ; Chama a funcao novamente com os novos valores de origem, auxiliar e destino
+    add esp, 16                         ; Limpa a pilha apos chamada
 
-    call print_disco
+    call print_disco                    ; Imprime o movimento realizado
 
-    mov ecx, [ebp+20]   ; Atualiza o contador da pilha novamente
-    sub ecx, 1          ; Decrementa o contador em 1
+    mov ecx, [ebp+20]                   ; Atualiza o contador da pilha novamente
+    sub ecx, 1                          ; Decrementa o contador em 1
     push ecx
-    mov eax, [ebp+12]   ; Insere o novo valor para origem (auxiliar)
+    mov eax, [ebp+12]                   ; Insere o novo valor para origem (auxiliar)
     push eax
-    mov eax, [ebp+16]   ; Insere o novo valor para auxiliar (origem)
+    mov eax, [ebp+16]                   ; Insere o novo valor para auxiliar (origem)
     push eax
-    mov eax, [ebp+8]    ; Insere o novo valor para destino (destino))
+    mov eax, [ebp+8]                    ; Insere o novo valor para destino (destino))
     push eax
-    call hanoi          ; Chama a funcao novamente com os novos valores de origem, auxiliar e destino
-    add esp, 16         ; Limpa a pilha apos chamada
+    call hanoi                          ; Chama a funcao novamente com os novos valores de origem, auxiliar e destino
+    add esp, 16                         ; Limpa a pilha apos chamada
 
-    jmp desempilha      ; Quando chega a este ponto, restaura os valores de EBP e ESP para o valor inicial
+    pop ebp                             ; Remove EBP do topo da pilha e restaura o valor original de EBP
+    ret
 
 um_disco:
-    call print_disco
 
-desempilha:
-
-    mov esp, ebp        ; Restaura o valor original de ESP
-    pop ebp             ; Remove EBP do topo da pilha e restaura o valor original de EBP
+    call print_disco                    ; Imprime o movimento realizado
+    
+    pop ebp                             ; Remove EBP do topo da pilha e restaura o valor original de EBP
     ret                 
 
 print_disco:
@@ -247,7 +246,7 @@ print_disco:
     call print
     add esp, 8
 
-    ; Converter o numero do disco de inteiro para string
+    ; Converte o numero do disco de inteiro para string
     
     call converte_int_para_string
     push edi
