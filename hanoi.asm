@@ -1,18 +1,20 @@
 section .bss
-    input resb 3 ; Armazenar a entrada do usuário (máximo de 2 dígitos + null terminator)
+    input resb 3                        ; Armazenar a entrada do usuário (máximo de 2 dígitos + null terminator)
 
 section .data
-    
-    quantidade_discos db "0000000000"  ; Buffer para armazenar a string, terminador nulo incluído.
-    len_quantidade_discos dd 0                  ; Tamanho da string resultante.
 
     ; Armazena os caracteres das torres
-    origem db "A"
-    auxiliar db "B"
-    destino db "C"
-    len equ $ - destino
+    origem db "A"                       ; Torre A
+    auxiliar db "B"                     ; Torre B
+    destino db "C"                      ; Torre C
+    len equ $ - destino                 ; Tamanho da string
 
+    ; Armazena a quebra de linha
     quebra_de_linha db 0x0a
+
+    ; Armazena a quantidade de discos. Isto será usado para converter o numero inteiro para string
+    quantidade_discos db "00"           ; Buffer para armazenar a string
+    len_quantidade_discos dd 0          ; Tamanho da string resultante
 
     ; Armazena textos
     texto1 db "Digite um numero entre 1 e 99: "
@@ -42,22 +44,19 @@ section .text
 
 _start:
 
-    call mensagem_inicial
-    call ler_entrada
-    call mensagem_qtd_discos
+    call mensagem_inicial               ; Imprime a mensagem inicial
+    call ler_entrada                    ; Le a entrada do usuario
+    call mensagem_quantidade_discos     ; Imprime a mensagem da quantidade de discos usados no algoritmo de hanoi
+    call converte_string_para_int       ; Chama a funcao que converte a quantidade de discos, que esta como string, para inteiro
 
-    ; Essa parte converte a string de entrada do usuario em um valor inteiro
-    call converte_string_para_int   ; chama a funcao que converte o numero(string) para inteiro
-    mov ecx, eax                    ; armazenar o número convertido em num_disks
+    ; Essa parte chama a funcao hanoi passando seus parametros na pilha: numero de discos, origem(A), auxiliar(B) e destino(C)
+    push ecx                            ; ebp+20
+    push origem                         ; ebp+16
+    push auxiliar                       ; ebp+12
+    push destino                        ; ebp+8
+    call hanoi                          ; ebp+4
 
-    ; Essa parte chama a funcao hanoi passando seus parametros de: numero de discos, origem(A), auxiliar(B) e destino(C)
-    push ecx        ; ebp+20
-    push origem     ; ebp+16
-    push auxiliar   ; ebp+12
-    push destino    ; ebp+8
-    call hanoi      ; ebp+4
-
-    call mensagem_final
+    call mensagem_final                 ; Imprime a mensagem final
 
     ; Finaliza o programa
     mov eax, 1
@@ -65,53 +64,60 @@ _start:
 
 mensagem_inicial:
 
-    ; Essa estrutura sera um padrao para imprimir uma mensagem em que coloco na pilha o texto, tamanho do texto, endereco de retorno e ebp nesta ordem
-    push texto1     ; ebp+12
-    push len1       ; ebp+8
-    call print      ; ebp+4
-    add esp, 8      ; limpa o conteudo restante
+    ; Essa estrutura sera um padrao para imprimir uma mensagem em que o texto é colocado na pilha. Os parametros da funcao sao: texto e tamanho do texto
+    push texto1                         ; ebp+12
+    push len1                           ; ebp+8
+    call print                          ; ebp+4
+    add esp, 8                          ; Limpa o conteudo restante
     
     ret
 
 ler_entrada:
 
     ; Ler a entrada do usuário. sys_read(mov eax, 3) precisa de 3 parametros(ebx, ecx e edx)
-    mov eax, 3          ; faz uma chamada de leitura
-    mov ebx, 0          ; entrada padrao stdin
-    mov ecx, input      ; armazena o endereco do buffer especificado em .bss
-    mov edx, 3          ; tamanho do buffer
-    int 0x80            ; chamada do sistema
+    mov eax, 3                          ; Faz uma chamada de leitura
+    mov ebx, 0                          ; Entrada padrao stdin
+    mov ecx, input                      ; Armazena o endereco do buffer especificado em .bss
+    mov edx, 3                          ; Tamanho do buffer
+    int 0x80                            ; Chamada do sistema
 
     ret
 
-mensagem_qtd_discos:
+mensagem_quantidade_discos:
 
     ; Imprime a seguinte mensagem, por exemplo: "Algoritmo da Torre de Hanoi com 3 discos:"
+
+    ; quebra de linha: 0x0a
     push quebra_de_linha
     push len
     call print
     add esp, 8
 
+    ; "Algoritmo da Torre de Hanoi com "
     push texto5
     push len5
     call print
     add esp, 8
 
+    ; numero de discos. Exemplo: 3
     push input
     push len
     call print
     add esp, 8
 
+    ; " discos:"
     push texto6
     push len6
     call print
     add esp, 8
 
+    ; quebra de linha: 0x0a
     push quebra_de_linha
     push len
     call print
     add esp, 8
 
+    ; quebra de linha: 0x0a
     push quebra_de_linha
     push len
     call print
@@ -121,19 +127,22 @@ mensagem_qtd_discos:
 
 converte_string_para_int:
 
-    mov esi, input                  ; armazena o endereço da string de entrada
-    mov eax, 0                    ; reseta EAX
-    movzx ecx, byte [esi]           ; armazena um byte da string apontada por ESI em ECX e preenche os restantes dos bits com 0
+    mov esi, input                      ; Armazena o endereço da string de entrada
+    mov eax, 0                          ; Reseta EAX
+    mov ecx, 0                          ; Reseta ECX
+    mov cl, [esi]                       ; Armazena um byte da string apontada por ESI em CL(8 bits menos significativos de ECX)
 
     loop_string_para_int:
     
-        sub ecx, '0'                    ; converte o caractere ASCII para valor numérico
-        imul eax, eax, 10               ; multiplica EAX por 10 (shift à esquerda de um dígito decimal)
-        add eax, ecx                    ; adiciona o valor a EAX
-        add esi, 1                      ; move para o próximo caractere
-        movzx ecx, byte [esi]           ; armazena um byte da string apontada por ESI em ECX e preenche os restantes dos bits com 0
-        cmp ecx, 0x0a                   ; verifica se é o caractere de quebra de linha
-        jne loop_string_para_int    ; repete o processo
+        sub ecx, '0'                    ; Converte o caractere ASCII para valor numérico
+        imul eax, eax, 10               ; Multiplica EAX por 10 (shift à esquerda de um dígito decimal)
+        add eax, ecx                    ; Adiciona o valor a EAX
+        add esi, 1                      ; Move para o próximo caractere
+        mov ecx, 0                      ; Reseta ECX
+        mov cl, [esi]                   ; Armazena um byte da string apontada por ESI em CL(8 bits menos significativos de ECX)
+        cmp ecx, 0x0a                   ; Verifica se é o caractere de quebra de linha
+        jne loop_string_para_int        ; Repete o processo
+        mov ecx, eax                    ; Armazenar o número convertido em ECX para posterior uso
         
         ret
 
@@ -142,7 +151,7 @@ converte_int_para_string:
     ; Número a ser convertido
     mov eax, [ebp+20]            ; Número para conversão
     mov edi, quantidade_discos        ; Ponteiro para o buffer quantidade_discos
-    add edi, 10            ; Apontar para o final do buffer
+    add edi, 2            ; Apontar para o final do buffer
     mov byte [edi], 0      ; Adicionar terminador nulo
 
     ; Conversão de inteiro para string
@@ -163,16 +172,20 @@ converte_int_para_string:
 mensagem_final:
 
     ; Exemplo da mensagem final: "Concluido"
+
+    ; quebra de linha: 0x0a
     push quebra_de_linha
     push len
     call print
     add esp, 8
 
+    ; "Concluido"
     push texto7
     push len7
     call print
     add esp, 8
 
+    ; quebra de linha: 0x0a
     push quebra_de_linha
     push len
     call print
