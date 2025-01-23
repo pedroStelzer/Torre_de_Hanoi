@@ -3,6 +3,9 @@ section .bss
 
 section .data
     
+    buffer db "0000000000"  ; Buffer para armazenar a string, terminador nulo incluído.
+    len_buffer dd 0                  ; Tamanho da string resultante.
+
     ; Armazena os caracteres das torres
     origem db "A"
     auxiliar db "B"
@@ -15,7 +18,7 @@ section .data
     texto1 db "Digite um numero entre 1 e 99: "
     len1 equ $ - texto1
 
-    texto2 db "Mova o disco"
+    texto2 db "Mova o disco "
     len2 equ $ - texto2
 
     texto3 db " da Torre "
@@ -132,6 +135,35 @@ converte_string_para_int:
 termina_convercao:
     ret                 ; retorna com o resultado do EAX
 
+converte_int_para_string:
+
+    ; Número a ser convertido
+    mov eax, [ebp+20]            ; Número para conversão
+    mov edi, buffer        ; Ponteiro para o buffer
+    add edi, 10            ; Apontar para o final do buffer
+    mov byte [edi], 0      ; Adicionar terminador nulo
+
+    ; Conversão de inteiro para string
+    converte_loop:
+        xor edx, edx           ; Limpar o registrador de resto
+        mov ebx, 10            ; Divisor (10)
+        div ebx                ; Dividir EAX por 10 (resultado em EAX, resto em EDX)
+        add dl, '0'            ; Converter resto para ASCII
+        dec edi                ; Mover ponteiro do buffer para trás
+        mov [edi], dl          ; Armazenar o caractere no buffer
+        inc dword [len_buffer]        ; Incrementar o tamanho da string
+        test eax, eax          ; Verificar se EAX é 0 (quociente)
+        jnz converte_loop       ; Se não for zero, continuar
+        
+        ; Impressão da string
+        mov eax, 4             ; Syscall número 4 (write)
+        mov ebx, 1             ; File descriptor 1 (stdout)
+        mov ecx, edi           ; Ponteiro para a string (buffer)
+        mov edx, [len_buffer]         ; Comprimento da string
+        int 0x80               ; Chamar o kernel
+
+        ret
+
 mensagem_final:
 
     ; Exemplo da mensagem final: "Concluido"
@@ -205,6 +237,10 @@ print_disco:
     push len2
     call print
     add esp, 8
+
+    ; Converter o numero do disco de inteiro para string
+    
+    call converte_int_para_string
 
     push texto3
     push len3
