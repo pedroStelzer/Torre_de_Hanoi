@@ -3,8 +3,8 @@ section .bss
 
 section .data
     
-    buffer db "0000000000"  ; Buffer para armazenar a string, terminador nulo incluído.
-    len_buffer dd 0                  ; Tamanho da string resultante.
+    quantidade_discos db "0000000000"  ; Buffer para armazenar a string, terminador nulo incluído.
+    len_quantidade_discos dd 0                  ; Tamanho da string resultante.
 
     ; Armazena os caracteres das torres
     origem db "A"
@@ -47,8 +47,6 @@ _start:
     call mensagem_qtd_discos
 
     ; Essa parte converte a string de entrada do usuario em um valor inteiro
-    mov esi, input                  ; armazena o endereço da string de entrada
-    xor eax, eax                    ; reseta EAX
     call converte_string_para_int   ; chama a funcao que converte o numero(string) para inteiro
     mov ecx, eax                    ; armazenar o número convertido em num_disks
 
@@ -123,44 +121,42 @@ mensagem_qtd_discos:
 
 converte_string_para_int:
 
+    mov esi, input                  ; armazena o endereço da string de entrada
+    mov eax, 0                    ; reseta EAX
     movzx ecx, byte [esi]           ; armazena um byte da string apontada por ESI em ECX e preenche os restantes dos bits com 0
-    cmp ecx, 0x0a                   ; verifica se é o caractere de quebra de linha
-    je termina_convercao            ; se a compacao for verdade, pula para o rotolo termina_conversao
-    sub ecx, '0'                    ; converte o caractere ASCII para valor numérico
-    imul eax, eax, 10               ; multiplica EAX por 10 (shift à esquerda de um dígito decimal)
-    add eax, ecx                    ; adiciona o valor a EAX
-    add esi, 1                      ; move para o próximo caractere
-    jmp converte_string_para_int    ; repete o processo
 
-termina_convercao:
-    ret                 ; retorna com o resultado do EAX
+    loop_string_para_int:
+    
+        sub ecx, '0'                    ; converte o caractere ASCII para valor numérico
+        imul eax, eax, 10               ; multiplica EAX por 10 (shift à esquerda de um dígito decimal)
+        add eax, ecx                    ; adiciona o valor a EAX
+        add esi, 1                      ; move para o próximo caractere
+        movzx ecx, byte [esi]           ; armazena um byte da string apontada por ESI em ECX e preenche os restantes dos bits com 0
+        cmp ecx, 0x0a                   ; verifica se é o caractere de quebra de linha
+        jne loop_string_para_int    ; repete o processo
+        
+        ret
 
 converte_int_para_string:
 
     ; Número a ser convertido
     mov eax, [ebp+20]            ; Número para conversão
-    mov edi, buffer        ; Ponteiro para o buffer
+    mov edi, quantidade_discos        ; Ponteiro para o buffer quantidade_discos
     add edi, 10            ; Apontar para o final do buffer
     mov byte [edi], 0      ; Adicionar terminador nulo
 
     ; Conversão de inteiro para string
-    converte_loop:
-        xor edx, edx           ; Limpar o registrador de resto
+    loop_int_para_string:
+
+        mov edx, 0           ; Limpar o registrador de resto
         mov ebx, 10            ; Divisor (10)
         div ebx                ; Dividir EAX por 10 (resultado em EAX, resto em EDX)
         add dl, '0'            ; Converter resto para ASCII
-        dec edi                ; Mover ponteiro do buffer para trás
+        sub edi, 1                ; Mover ponteiro do buffer para trás
         mov [edi], dl          ; Armazenar o caractere no buffer
-        inc dword [len_buffer]        ; Incrementar o tamanho da string
-        test eax, eax          ; Verificar se EAX é 0 (quociente)
-        jnz converte_loop       ; Se não for zero, continuar
-        
-        ; Impressão da string
-        mov eax, 4             ; Syscall número 4 (write)
-        mov ebx, 1             ; File descriptor 1 (stdout)
-        mov ecx, edi           ; Ponteiro para a string (buffer)
-        mov edx, [len_buffer]         ; Comprimento da string
-        int 0x80               ; Chamar o kernel
+        add dword [len_quantidade_discos], 1        ; Incrementar o tamanho da string
+        cmp eax, 0          ; Verificar se EAX é 0 (quociente)
+        jne loop_int_para_string       ; Se não for zero, continuar
 
         ret
 
@@ -241,6 +237,10 @@ print_disco:
     ; Converter o numero do disco de inteiro para string
     
     call converte_int_para_string
+    push edi
+    push dword [len_quantidade_discos]
+    call print
+    add esp, 8
 
     push texto3
     push len3
